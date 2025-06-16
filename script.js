@@ -1,54 +1,191 @@
-// Game configuration and state variables
-const GOAL_CANS = 25;        // Total items needed to collect
-let currentCans = 0;         // Current number of items collected
-let gameActive = false;      // Tracks if game is currently running
-let spawnInterval;          // Holds the interval for spawning items
+"use strict";
 
-// Creates the 3x3 game grid where items will appear
-function createGrid() {
-  const grid = document.querySelector('.game-grid');
-  grid.innerHTML = ''; // Clear any existing grid cells
-  for (let i = 0; i < 9; i++) {
-    const cell = document.createElement('div');
-    cell.className = 'grid-cell'; // Each cell represents a grid square
-    grid.appendChild(cell);
+(function () {
+  // === DOM Elements ===
+  const game = document.getElementById("game");
+  const jerry = document.getElementById("jerry");
+  const timerElement = document.getElementById("timer");
+
+  // === Game State ===
+  let jerryX = window.innerWidth / 2 - 40;
+  const keyStates = { left: false, right: false };
+  const moveSpeed = 5;
+  let timeLeft = 30; // seconds
+
+  // === Overlay Elements ===
+  const startOverlay = document.getElementById('start-overlay');
+  const loseOverlay = document.getElementById('lose-overlay');
+  const winOverlay = document.getElementById('win-overlay');
+  const startBtn = document.getElementById('start-btn');
+  const restartBtn = document.getElementById('restart-btn');
+  const playAgainBtn = document.getElementById('playagain-btn');
+
+  let gameActive = false;
+  let raindropInterval = null;
+  let countdown = null;
+
+  // === Input Handling ===
+  document.addEventListener("keydown", (e) => {
+    if (!gameActive) return;
+    if (e.key === "ArrowLeft") keyStates.left = true;
+    if (e.key === "ArrowRight") keyStates.right = true;
+  });
+
+  document.addEventListener("keyup", (e) => {
+    if (!gameActive) return;
+    if (e.key === "ArrowLeft") keyStates.left = false;
+    if (e.key === "ArrowRight") keyStates.right = false;
+  });
+
+  // === Movement ===
+  function updateJerryPosition() {
+    if (keyStates.left) jerryX -= moveSpeed;
+    if (keyStates.right) jerryX += moveSpeed;
+
+    // Clamp Jerry inside the 800px game region (width of Jerry is 80px)
+    jerryX = Math.max(80, Math.min(800 - 80, jerryX));
+    jerry.style.left = `${jerryX}px`;
   }
-}
 
-// Ensure the grid is created when the page loads
-createGrid();
+  function gameLoop() {
+    if (gameActive) updateJerryPosition();
+    requestAnimationFrame(gameLoop);
+  }
 
-// Spawns a new item in a random grid cell
-function spawnWaterCan() {
-  if (!gameActive) return; // Stop if the game is not active
-  const cells = document.querySelectorAll('.grid-cell');
-  
-  // Clear all cells before spawning a new water can
-  cells.forEach(cell => (cell.innerHTML = ''));
+  function addFiveSecondsToTimer() {
+    timeLeft += 5;
+  }
 
-  // Select a random cell from the grid to place the water can
-  const randomCell = cells[Math.floor(Math.random() * cells.length)];
+  // === Floating Time Notification ===
+  const timeFloaters = document.getElementById("time-floaters");
+  function showTimeFloater(text, color = '#2ecc40') {
+    const floater = document.createElement('div');
+    floater.className = 'time-floater';
+    floater.textContent = text;
+    floater.style.color = color;
+    timeFloaters.appendChild(floater);
+    setTimeout(() => {
+      floater.style.opacity = '0';
+      floater.style.transform = 'translateY(-40px)';
+    }, 50);
+    setTimeout(() => {
+      floater.remove();
+    }, 1200);
+  }
 
-  // Use a template literal to create the wrapper and water-can element
-  randomCell.innerHTML = `
-    <div class="water-can-wrapper">
-      <div class="water-can"></div>
-    </div>
-  `;
-}
+  // === Raindrop Logic ===
+  function createRaindrop() {
+    if (!gameActive) return;
+    const drop = document.createElement("div");
+    const isDirty = Math.random() < 0.25;
+    drop.classList.add("raindrop");
+    if (isDirty) drop.classList.add("dirty");
+    // Set random horizontal position within game area (800px), minus drop width (15px)
+    drop.style.left = Math.random() * (800 - 15) + "px";
+    drop.style.position = "absolute";
+    drop.style.top = "0px";
+    game.appendChild(drop);
+    let dropY = 0;
+    // Random fall speed between 5 and 10 px per frame
+    const fallSpeed = 5 + Math.random() * 5;
+    const fallInterval = setInterval(() => {
+      dropY += fallSpeed;
+      drop.style.top = `${dropY}px`;
+      const dropRect = drop.getBoundingClientRect();
+      const jerryRect = jerry.getBoundingClientRect();
+      // Improved collision: only count as caught if drop's bottom is above Jerry's bottom and overlaps horizontally
+      const verticallyAligned = dropRect.bottom >= jerryRect.top && dropRect.bottom <= jerryRect.bottom;
+      const horizontallyAligned = dropRect.right > jerryRect.left && dropRect.left < jerryRect.right;
+      const caught = verticallyAligned && horizontallyAligned;
+      const missed = dropY > 600;
+      if (caught || missed) {
+        game.removeChild(drop);
+        clearInterval(fallInterval);
+        if (caught) {
+          if (isDirty) {
+            timeLeft = Math.max(0, timeLeft - 20);
+            showTimeFloater('-20', '#e74c3c');
+            penaltySound.currentTime = 0; penaltySound.play();
+          } else {
+            timeLeft += 5;
+            showTimeFloater('+5', '#2ecc40');
+            rewardSound.currentTime = 0; rewardSound.play();
+          }
+        }
+      }
+    }, 30);
+  }
 
-// Initializes and starts a new game
-function startGame() {
-  if (gameActive) return; // Prevent starting a new game if one is already active
-  gameActive = true;
-  createGrid(); // Set up the game grid
-  spawnInterval = setInterval(spawnWaterCan, 1000); // Spawn water cans every second
-}
+  // === Timer Logic ===
+  function updateTimerDisplay() {
+    timerElement.textContent = `Time: ${timeLeft}`;
+    if (timeLeft >= 300) {
+      endGame(true);
+    }
+  }
 
-function endGame() {
-  gameActive = false; // Mark the game as inactive
-  clearInterval(spawnInterval); // Stop spawning water cans
-}
+  function startTimer() {
+    updateTimerDisplay();
+    const countdown = setInterval(() => {
+      timeLeft--;
+      updateTimerDisplay();
 
-// Set up click handler for the start button
-document.getElementById('start-game').addEventListener('click', startGame);
+      if (timeLeft <= 0) {
+        clearInterval(countdown);
+        endGame(false);
+      }
+    }, 1000);
+  }
+
+  // === Sound Effects ===
+  const rewardSound = new Audio('sounds/reward.mp3');
+  const penaltySound = new Audio('sounds/penalty.mp3');
+
+  // === Overlay Logic ===
+  function showOverlay(overlay) {
+    startOverlay.hidden = true;
+    loseOverlay.hidden = true;
+    winOverlay.hidden = true;
+    if (overlay) overlay.hidden = false;
+  }
+
+  function startGame() {
+    timeLeft = 30;
+    updateTimerDisplay();
+    jerryX = 800 / 2 - 40;
+    jerry.style.left = `${jerryX}px`;
+    // Reset key states to prevent stuck movement
+    keyStates.left = false;
+    keyStates.right = false;
+    gameActive = true;
+    showOverlay();
+    if (countdown) clearInterval(countdown);
+    countdown = setInterval(() => {
+      timeLeft--;
+      updateTimerDisplay();
+      if (timeLeft <= 0) {
+        endGame(false);
+      }
+    }, 1000);
+    if (raindropInterval) clearInterval(raindropInterval);
+    raindropInterval = setInterval(createRaindrop, 700);
+  }
+
+  function endGame(win) {
+    gameActive = false;
+    if (countdown) clearInterval(countdown);
+    if (raindropInterval) clearInterval(raindropInterval);
+    showOverlay(win ? winOverlay : loseOverlay);
+  }
+
+  // Button events
+  startBtn.onclick = startGame;
+  restartBtn.onclick = startGame;
+  playAgainBtn.onclick = startGame;
+
+  // Show start overlay on load
+  showOverlay(startOverlay);
+
+  // Start the game loop
+  gameLoop();
+})();
