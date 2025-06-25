@@ -294,3 +294,15 @@ body.blind::before {
   background: #0A75BC;
   color: #FFD700;
 }
+
+body, .overlay-content, #cw-footer {
+  font-family: 'Georgia', serif;
+}
+.overlay-content h1, .overlay-content label, .overlay-content b, #cw-footer a {
+  font-family: 'Georgia', serif;
+  font-weight: 700;
+}
+.overlay-content p, .overlay-content ul, .overlay-content li {
+  font-family: 'Georgia', serif;
+  font-weight: 400;
+}
