@@ -100,8 +100,28 @@
         <h1>Rain Drop Collector</h1>
         <p>Help <b>Jerry</b> collect clean water!<br>
         Use the <b>left</b> and <b>right</b> arrow keys to move Jerry.<br>
-        Catch <b style="color:#2196f3">blue</b> drops and avoid <b style="color:#e74c3c">red</b> ones.<br>
-        Each clean drop adds time. Reach 300 seconds to win!</p>
+        <!-- Catch <b style="color:#2196f3">blue</b> drops and avoid <b style="color:#e74c3c">red</b> ones.<br> -->
+      Reach 300 seconds to win!</p>
+        <div style="margin:1em 0 1em 0; text-align:left; font-size:1em;">
+          <b>Special Drops:</b>
+          <ul style="margin:0 0 0 1.2em;">
+            <li><span style="color:#FFD700; font-weight:bold;">Golden</span>: +20 seconds</li>
+            <li><span style="color:#00e6e6; font-weight:bold;">Slow-mo</span>: Slows all drops</li>
+            <li><span style="color:#aaff00; font-weight:bold;">Shield</span>: Temporary immunity to toxic drops</li>
+            <li><span style="color:#b266ff; font-weight:bold;">Double</span>: Double points for clean drops</li>
+            <li><span style="color:#ff6600; font-weight:bold;">Speed Up</span>: All drops fall faster</li>
+            <li><span style="color:#ff00aa; font-weight:bold;">Reverse</span>: Controls are reversed</li>
+            <li><span style="color:#222; font-weight:bold;">Blind</span>: Screen dims briefly</li>
+          </ul>
+        </div>
+        <div style="margin-bottom:1em;">
+          <label for="difficulty-select"><b>Difficulty:</b></label>
+          <select id="difficulty-select">
+            <option value="easy">Easy</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
         <button id="start-btn">Start Game</button>
         <div class="cw-link"><a href="https://www.charitywater.org/" target="_blank">Support Charity: Water</a></div>
       </div>
